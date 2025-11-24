@@ -4,6 +4,7 @@ import sqlite3
 from tkinter import messagebox
 import crypto_utils  # Imports your new custom song file
 import datetime
+import string # Added for checking special characters
 
 # --- Set the appearance ---
 ctk.set_appearance_mode("light")
@@ -65,14 +66,17 @@ class LoginPage(ctk.CTkFrame):
 
         # --- Database Login Logic ---
         try:
+            # Check User_Registration for the user
             self.controller.db_cursor.execute("SELECT user_id, password_hash, salt FROM User_Registration WHERE username = ?", (username,))
             user_data = self.controller.db_cursor.fetchone()
 
             if user_data:
                 user_id, stored_hash, salt = user_data
                 
+                # Verify using Song Cipher
                 if crypto_utils.verify_password(stored_hash, salt, password):
                     # --- SUCCESS! ---
+                    # Log the login time in User_Logins
                     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     self.controller.db_cursor.execute(
                         "INSERT INTO User_Logins (user_id, login_timestamp) VALUES (?, ?)",
@@ -100,6 +104,9 @@ class RegisterPage(ctk.CTkFrame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
+        
+        # Track if password meets requirements
+        self.password_is_strong = False
 
         header_frame = ctk.CTkFrame(self, fg_color="#4A6984", height=50, corner_radius=0)
         header_frame.pack(fill="x", side="top")
@@ -120,12 +127,19 @@ class RegisterPage(ctk.CTkFrame):
         password_label = ctk.CTkLabel(reg_frame, text="Password", font=("Arial", 14))
         password_label.pack(anchor="w", padx=10)
         self.password_entry = ctk.CTkEntry(reg_frame, placeholder_text="Create a master password", show="*", height=40, corner_radius=10, border_color="#D3D3D3", border_width=1)
-        self.password_entry.pack(fill="x", padx=10, pady=5)
+        self.password_entry.pack(fill="x", padx=10, pady=(5, 5))
+        
+        # --- Password Strength Indicator ---
+        self.strength_label = ctk.CTkLabel(reg_frame, text="Must be 12+ chars & 1 special char", font=("Arial", 11), text_color="gray")
+        self.strength_label.pack(anchor="w", padx=15)
+        
+        # Bind the key release event to check password as user types
+        self.password_entry.bind("<KeyRelease>", self.check_password_strength)
 
         confirm_label = ctk.CTkLabel(reg_frame, text="Confirm Password", font=("Arial", 14))
-        confirm_label.pack(anchor="w", padx=10, pady=(20, 0))
+        confirm_label.pack(anchor="w", padx=10, pady=(15, 0))
         self.confirm_entry = ctk.CTkEntry(reg_frame, placeholder_text="Confirm your password", show="*", height=40, corner_radius=10, border_color="#D3D3D3", border_width=1)
-        self.confirm_entry.pack(fill="x", padx=10, pady=5)
+        self.confirm_entry.pack(fill="x", padx=10, pady=(5, 5))
 
         self.error_label = ctk.CTkLabel(reg_frame, text="", text_color="red")
         self.error_label.pack(pady=(10, 0))
@@ -138,6 +152,24 @@ class RegisterPage(ctk.CTkFrame):
                                      fg_color="transparent", text_color="#C0392B", hover=False)
         login_button.pack()
 
+    def check_password_strength(self, event=None):
+        """Checks password length and special characters."""
+        password = self.password_entry.get()
+        
+        # Rules: 12 Chars AND Special Character
+        has_length = len(password) >= 12
+        has_special = any(char in string.punctuation for char in password)
+        
+        if has_length and has_special:
+            self.strength_label.configure(text="✅ Strong Password", text_color="green")
+            self.password_is_strong = True
+        else:
+            msg = "Weak: "
+            if not has_length: msg += "Need 12+ chars. "
+            if not has_special: msg += "Need symbol (!@#)."
+            self.strength_label.configure(text=msg, text_color="#C0392B") # Dark red
+            self.password_is_strong = False
+
     def register_event(self):
         username = self.username_entry.get()
         password = self.password_entry.get()
@@ -147,18 +179,27 @@ class RegisterPage(ctk.CTkFrame):
             self.error_label.configure(text="Please fill in all fields.")
             return
         
+        # --- IMPROVEMENT: Run check again manually to be safe ---
+        # (Handles cases like copy-paste where KeyRelease might have missed)
+        self.check_password_strength()
+        
+        if not self.password_is_strong:
+            self.error_label.configure(text="Password is too weak.")
+            return
+
         if password != confirm:
             self.error_label.configure(text="Passwords do not match.")
             return
 
         try:
+            # Check User_Registration for duplicates
             self.controller.db_cursor.execute("SELECT * FROM User_Registration WHERE username = ?", (username,))
             if self.controller.db_cursor.fetchone():
                 self.error_label.configure(text="Username already taken.")
                 return
 
-            # Custom Crypto: Create salt and hash
-            salt = crypto_utils.generate_salt()
+            # Custom Song Crypto
+            salt = crypto_utils.generate_salt() # Pick a random song
             password_hash = crypto_utils.hash_password(password, salt)
 
             now = datetime.datetime.now().isoformat()
@@ -175,6 +216,7 @@ class RegisterPage(ctk.CTkFrame):
             self.username_entry.delete(0, 'end')
             self.password_entry.delete(0, 'end')
             self.confirm_entry.delete(0, 'end')
+            self.strength_label.configure(text="Must be 12+ chars & 1 special char", text_color="gray")
             self.controller.show_frame(LoginPage)
 
         except sqlite3.Error as e:
@@ -394,6 +436,12 @@ class HomePage(ctk.CTkFrame):
              messagebox.showwarning("Error", "Please save the note before encrypting.")
              return
              
+        # Check if it's already encrypted
+        self.controller.db_cursor.execute("SELECT is_encrypted FROM Entries WHERE entry_id = ?", (self.current_selected_entry_id,))
+        if self.controller.db_cursor.fetchone()[0] == 1:
+            messagebox.showinfo("Info", "This entry is already encrypted.")
+            return
+
         # 1. Get the password
         dialog = ctk.CTkInputDialog(text="Enter a password to combine with the Song Key:", title="Encrypt Note")
         password = dialog.get_input()
@@ -526,13 +574,17 @@ class App(ctk.CTk):
 
     def show_frame(self, page_class):
         frame = self.frames[page_class]
+        
+        # If we are showing the HomePage, resize the window
         if page_class == HomePage:
-            self.geometry("800x600") 
+            self.geometry("800x600") # Make window bigger for homepage
             self.resizable(True, True)
-            frame.load_user_entries() 
+            frame.load_user_entries() # Tell homepage to load this user's data
         else:
-            self.geometry("400x550") 
+            # --- CHANGE THIS LINE BELOW ---
+            self.geometry("400x650") # Increased height from 550 to 650
             self.resizable(False, False)
+            
         frame.tkraise()
 
     def set_current_user(self, user_id):
