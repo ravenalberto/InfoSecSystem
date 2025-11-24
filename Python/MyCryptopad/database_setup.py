@@ -1,24 +1,26 @@
 # database_setup.py
 import sqlite3
 
-# Connect to (or create) the database file
 conn = sqlite3.connect('CryptoPad.db')
 cursor = conn.cursor()
 
-# --- TABLE 1: User_Registration ---
-# Formerly "Users". This stores WHO the users are.
+# --- TABLE 1: User_Registration (UPDATED) ---
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS User_Registration (
     user_id       INTEGER PRIMARY KEY AUTOINCREMENT,
     username      TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    salt          BLOB NOT NULL,
-    date_registered TEXT
+    salt          TEXT NOT NULL,
+    date_registered TEXT,
+    Firstname     TEXT,
+    MiddleName    TEXT,
+    LastName      TEXT,
+    Email         TEXT,
+    ContactNumber TEXT
 );
 ''')
 
-# --- TABLE 2: User_Logins (NEW) ---
-# This tracks WHEN users access the system.
+# --- TABLE 2: User_Logins ---
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS User_Logins (
     login_id        INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,7 +31,6 @@ CREATE TABLE IF NOT EXISTS User_Logins (
 ''')
 
 # --- TABLE 3: Entries ---
-# Stores the diary data. Now links to User_Registration.
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS Entries (
     entry_id      INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,5 +45,4 @@ CREATE TABLE IF NOT EXISTS Entries (
 
 conn.commit()
 conn.close()
-
-print("Database 'CryptoPad.db' with 3 tables created successfully.")
+print("Database updated with new columns successfully.")
