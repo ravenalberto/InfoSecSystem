@@ -4,7 +4,7 @@ import sqlite3
 from tkinter import messagebox
 import crypto_utils  # Imports your new custom song file
 import datetime
-import string # Added for checking special characters
+import string 
 
 # --- Set the appearance ---
 ctk.set_appearance_mode("light")
@@ -30,27 +30,22 @@ class LoginPage(ctk.CTkFrame):
         title_label = ctk.CTkLabel(login_frame, text="Sign In", font=("Arial", 30, "bold"))
         title_label.pack(pady=(20, 30))
 
-        # --- Username ---
         username_label = ctk.CTkLabel(login_frame, text="Username", font=("Arial", 14))
         username_label.pack(anchor="w", padx=10)
         self.username_entry = ctk.CTkEntry(login_frame, placeholder_text="Enter Username", height=40, corner_radius=10, border_color="#D3D3D3", border_width=1)
         self.username_entry.pack(fill="x", padx=10, pady=(5, 20))
 
-        # --- Password ---
         password_label = ctk.CTkLabel(login_frame, text="Password", font=("Arial", 14))
         password_label.pack(anchor="w", padx=10)
         self.password_entry = ctk.CTkEntry(login_frame, placeholder_text="Enter Password", show="*", height=40, corner_radius=10, border_color="#D3D3D3", border_width=1)
         self.password_entry.pack(fill="x", padx=10, pady=5)
 
-        # --- Login Error Label ---
         self.error_label = ctk.CTkLabel(login_frame, text="", text_color="red")
         self.error_label.pack(pady=(10, 0))
 
-        # --- "Confirm" Button ---
         login_button = ctk.CTkButton(login_frame, text="Confirm", command=self.login_event, height=40, corner_radius=10, font=("Arial", 16, "bold"), fg_color="#4A6984", hover_color="#3B546A")
         login_button.pack(fill="x", padx=10, pady=(30, 10))
 
-        # --- "Create an account" Button ---
         register_button = ctk.CTkButton(login_frame, text="Don't have an account? Create an account.", 
                                         command=lambda: controller.show_frame(RegisterPage), 
                                         fg_color="transparent", text_color="#C0392B", hover=False)
@@ -64,19 +59,14 @@ class LoginPage(ctk.CTkFrame):
             self.error_label.configure(text="Please fill in all fields.")
             return
 
-        # --- Database Login Logic ---
         try:
-            # Check User_Registration for the user
             self.controller.db_cursor.execute("SELECT user_id, password_hash, salt FROM User_Registration WHERE username = ?", (username,))
             user_data = self.controller.db_cursor.fetchone()
 
             if user_data:
                 user_id, stored_hash, salt = user_data
                 
-                # Verify using Song Cipher
                 if crypto_utils.verify_password(stored_hash, salt, password):
-                    # --- SUCCESS! ---
-                    # Log the login time in User_Logins
                     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     self.controller.db_cursor.execute(
                         "INSERT INTO User_Logins (user_id, login_timestamp) VALUES (?, ?)",
@@ -98,65 +88,86 @@ class LoginPage(ctk.CTkFrame):
             messagebox.showerror("Login Error", f"An error occurred: {e}")
 
 # ##################################################################
-#  REGISTER PAGE FRAME
+#  REGISTER PAGE FRAME (UPDATED WITH NEW COLUMNS)
 # ##################################################################
 class RegisterPage(ctk.CTkFrame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
-        
-        # Track if password meets requirements
         self.password_is_strong = False
 
+        # --- Scrollable Frame for Registration ---
+        # Because we have so many fields now, we need a scrollbar!
         header_frame = ctk.CTkFrame(self, fg_color="#4A6984", height=50, corner_radius=0)
         header_frame.pack(fill="x", side="top")
         header_label = ctk.CTkLabel(header_frame, text="CRYPTOPAD", font=("Arial", 18, "bold"), text_color="white")
         header_label.pack(pady=12)
 
-        reg_frame = ctk.CTkFrame(self, fg_color="transparent")
-        reg_frame.pack(fill="both", expand=True, padx=30, pady=20)
+        # Make the main container scrollable
+        reg_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        reg_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-        title_label = ctk.CTkLabel(reg_frame, text="Create Account", font=("Arial", 30, "bold"))
-        title_label.pack(pady=(20, 30))
+        title_label = ctk.CTkLabel(reg_frame, text="Create Account", font=("Arial", 24, "bold"))
+        title_label.pack(pady=(10, 20))
 
-        username_label = ctk.CTkLabel(reg_frame, text="Username", font=("Arial", 14))
-        username_label.pack(anchor="w", padx=10)
-        self.username_entry = ctk.CTkEntry(reg_frame, placeholder_text="Enter a unique username", height=40, corner_radius=10, border_color="#D3D3D3", border_width=1)
-        self.username_entry.pack(fill="x", padx=10, pady=(5, 20))
-
-        password_label = ctk.CTkLabel(reg_frame, text="Password", font=("Arial", 14))
-        password_label.pack(anchor="w", padx=10)
-        self.password_entry = ctk.CTkEntry(reg_frame, placeholder_text="Create a master password", show="*", height=40, corner_radius=10, border_color="#D3D3D3", border_width=1)
-        self.password_entry.pack(fill="x", padx=10, pady=(5, 5))
+        # --- NEW FIELDS ---
         
-        # --- Password Strength Indicator ---
+        # First Name
+        ctk.CTkLabel(reg_frame, text="First Name", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.fname_entry = ctk.CTkEntry(reg_frame, placeholder_text="First Name", height=35)
+        self.fname_entry.pack(fill="x", padx=10, pady=(0, 10))
+
+        # Middle Name
+        ctk.CTkLabel(reg_frame, text="Middle Name", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.mname_entry = ctk.CTkEntry(reg_frame, placeholder_text="Middle Name (Optional)", height=35)
+        self.mname_entry.pack(fill="x", padx=10, pady=(0, 10))
+
+        # Last Name
+        ctk.CTkLabel(reg_frame, text="Last Name", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.lname_entry = ctk.CTkEntry(reg_frame, placeholder_text="Last Name", height=35)
+        self.lname_entry.pack(fill="x", padx=10, pady=(0, 10))
+
+        # Email
+        ctk.CTkLabel(reg_frame, text="Email Address", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.email_entry = ctk.CTkEntry(reg_frame, placeholder_text="example@email.com", height=35)
+        self.email_entry.pack(fill="x", padx=10, pady=(0, 10))
+
+        # Contact Number
+        ctk.CTkLabel(reg_frame, text="Contact Number", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.contact_entry = ctk.CTkEntry(reg_frame, placeholder_text="0912 345 6789", height=35)
+        self.contact_entry.pack(fill="x", padx=10, pady=(0, 10))
+
+        # --- ORIGINAL FIELDS ---
+
+        ctk.CTkLabel(reg_frame, text="Username", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.username_entry = ctk.CTkEntry(reg_frame, placeholder_text="Unique Username", height=35)
+        self.username_entry.pack(fill="x", padx=10, pady=(0, 10))
+
+        ctk.CTkLabel(reg_frame, text="Password", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.password_entry = ctk.CTkEntry(reg_frame, placeholder_text="Password", show="*", height=35)
+        self.password_entry.pack(fill="x", padx=10, pady=(0, 5))
+        
         self.strength_label = ctk.CTkLabel(reg_frame, text="Must be 12+ chars & 1 special char", font=("Arial", 11), text_color="gray")
         self.strength_label.pack(anchor="w", padx=15)
-        
-        # Bind the key release event to check password as user types
         self.password_entry.bind("<KeyRelease>", self.check_password_strength)
 
-        confirm_label = ctk.CTkLabel(reg_frame, text="Confirm Password", font=("Arial", 14))
-        confirm_label.pack(anchor="w", padx=10, pady=(15, 0))
-        self.confirm_entry = ctk.CTkEntry(reg_frame, placeholder_text="Confirm your password", show="*", height=40, corner_radius=10, border_color="#D3D3D3", border_width=1)
-        self.confirm_entry.pack(fill="x", padx=10, pady=(5, 5))
+        ctk.CTkLabel(reg_frame, text="Confirm Password", font=("Arial", 12)).pack(anchor="w", padx=10)
+        self.confirm_entry = ctk.CTkEntry(reg_frame, placeholder_text="Confirm Password", show="*", height=35)
+        self.confirm_entry.pack(fill="x", padx=10, pady=(0, 20))
 
         self.error_label = ctk.CTkLabel(reg_frame, text="", text_color="red")
-        self.error_label.pack(pady=(10, 0))
+        self.error_label.pack(pady=(5, 0))
 
-        create_button = ctk.CTkButton(reg_frame, text="Create Account", command=self.register_event, height=40, corner_radius=10, font=("Arial", 16, "bold"), fg_color="#4A6984", hover_color="#3B546A")
-        create_button.pack(fill="x", padx=10, pady=(30, 10))
+        create_button = ctk.CTkButton(reg_frame, text="Create Account", command=self.register_event, height=40, font=("Arial", 16, "bold"), fg_color="#4A6984", hover_color="#3B546A")
+        create_button.pack(fill="x", padx=10, pady=(10, 10))
 
-        login_button = ctk.CTkButton(reg_frame, text="Already have an account? Sign In", 
+        login_button = ctk.CTkButton(reg_frame, text="Back to Sign In", 
                                      command=lambda: controller.show_frame(LoginPage), 
                                      fg_color="transparent", text_color="#C0392B", hover=False)
-        login_button.pack()
+        login_button.pack(pady=10)
 
     def check_password_strength(self, event=None):
-        """Checks password length and special characters."""
         password = self.password_entry.get()
-        
-        # Rules: 12 Chars AND Special Character
         has_length = len(password) >= 12
         has_special = any(char in string.punctuation for char in password)
         
@@ -167,22 +178,26 @@ class RegisterPage(ctk.CTkFrame):
             msg = "Weak: "
             if not has_length: msg += "Need 12+ chars. "
             if not has_special: msg += "Need symbol (!@#)."
-            self.strength_label.configure(text=msg, text_color="#C0392B") # Dark red
+            self.strength_label.configure(text=msg, text_color="#C0392B")
             self.password_is_strong = False
 
     def register_event(self):
+        # 1. Get all inputs
+        fname = self.fname_entry.get()
+        mname = self.mname_entry.get()
+        lname = self.lname_entry.get()
+        email = self.email_entry.get()
+        contact = self.contact_entry.get()
         username = self.username_entry.get()
         password = self.password_entry.get()
         confirm = self.confirm_entry.get()
 
-        if not username or not password or not confirm:
-            self.error_label.configure(text="Please fill in all fields.")
+        # 2. Validation
+        if not fname or not lname or not username or not password:
+            self.error_label.configure(text="Name, Username, and Password are required.")
             return
         
-        # --- IMPROVEMENT: Run check again manually to be safe ---
-        # (Handles cases like copy-paste where KeyRelease might have missed)
         self.check_password_strength()
-        
         if not self.password_is_strong:
             self.error_label.configure(text="Password is too weak.")
             return
@@ -192,31 +207,25 @@ class RegisterPage(ctk.CTkFrame):
             return
 
         try:
-            # Check User_Registration for duplicates
             self.controller.db_cursor.execute("SELECT * FROM User_Registration WHERE username = ?", (username,))
             if self.controller.db_cursor.fetchone():
                 self.error_label.configure(text="Username already taken.")
                 return
 
-            # Custom Song Crypto
-            salt = crypto_utils.generate_salt() # Pick a random song
+            salt = crypto_utils.generate_salt() 
             password_hash = crypto_utils.hash_password(password, salt)
-
             now = datetime.datetime.now().isoformat()
             
+            # 3. SAVE TO DATABASE (Updated Logic)
             self.controller.db_cursor.execute(
-                "INSERT INTO User_Registration (username, password_hash, salt, date_registered) VALUES (?, ?, ?, ?)",
-                (username, password_hash, salt, now)
+                """INSERT INTO User_Registration 
+                (username, password_hash, salt, date_registered, Firstname, MiddleName, LastName, Email, ContactNumber) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (username, password_hash, salt, now, fname, mname, lname, email, contact)
             )
             self.controller.db_conn.commit()
 
             messagebox.showinfo("Success", "Account created successfully! Please log in.")
-            
-            self.error_label.configure(text="")
-            self.username_entry.delete(0, 'end')
-            self.password_entry.delete(0, 'end')
-            self.confirm_entry.delete(0, 'end')
-            self.strength_label.configure(text="Must be 12+ chars & 1 special char", text_color="gray")
             self.controller.show_frame(LoginPage)
 
         except sqlite3.Error as e:
@@ -229,7 +238,6 @@ class HomePage(ctk.CTkFrame):
     def __init__(self, parent, controller):
         super().__init__(parent)
         self.controller = controller
-        
         self.current_selected_entry_id = None
         
         self.grid_columnconfigure(0, weight=1)
@@ -239,7 +247,6 @@ class HomePage(ctk.CTkFrame):
         # --- Left Frame ---
         left_frame = ctk.CTkFrame(self, width=250, corner_radius=0)
         left_frame.grid(row=0, column=0, sticky="nsew")
-        
         left_frame.grid_rowconfigure(1, weight=1) 
         
         list_header = ctk.CTkFrame(left_frame, fg_color="#4A6984", corner_radius=0)
@@ -257,27 +264,25 @@ class HomePage(ctk.CTkFrame):
         # --- Right Frame ---
         right_frame = ctk.CTkFrame(self, fg_color="transparent")
         right_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
-        
         right_frame.grid_rowconfigure(2, weight=1) 
         right_frame.grid_columnconfigure(0, weight=1)
 
         top_bar = ctk.CTkFrame(right_frame, fg_color="transparent")
         top_bar.grid(row=0, column=0, sticky="ew")
         
+        # Display First Name if available, otherwise Username
         self.welcome_label = ctk.CTkLabel(top_bar, text="Welcome!", font=("Arial", 16))
         self.welcome_label.pack(side="left", padx=10)
         
         logout_button = ctk.CTkButton(top_bar, text="Logout", width=100, command=lambda: controller.logout())
         logout_button.pack(side="right", padx=10)
 
-        # --- Editor Widgets ---
         self.title_entry = ctk.CTkEntry(right_frame, placeholder_text="Entry Title", height=40, font=("Arial", 16, "bold"))
         self.title_entry.grid(row=1, column=0, sticky="ew", pady=(10, 5))
         
         self.content_text = ctk.CTkTextbox(right_frame, font=("Arial", 14), wrap="word")
         self.content_text.grid(row=2, column=0, sticky="nsew", pady=5)
         
-        # --- Button Bar ---
         button_bar = ctk.CTkFrame(right_frame, fg_color="transparent")
         button_bar.grid(row=3, column=0, sticky="ew", pady=5)
         
@@ -294,8 +299,6 @@ class HomePage(ctk.CTkFrame):
         self.delete_button.pack(side="right", padx=5)
         
         self.clear_fields() 
-
-    # --- Homepage Functions ---
 
     def clear_fields(self, new_entry=False):
         self.current_selected_entry_id = None
@@ -322,11 +325,13 @@ class HomePage(ctk.CTkFrame):
         user_id = self.controller.get_current_user_id()
         if not user_id: return 
             
-        self.controller.db_cursor.execute("SELECT username FROM User_Registration WHERE user_id = ?", (user_id,))
+        # Use Firstname for welcome message, fallback to username
+        self.controller.db_cursor.execute("SELECT username, Firstname FROM User_Registration WHERE user_id = ?", (user_id,))
         result = self.controller.db_cursor.fetchone()
         if result:
-            username = result[0]
-            self.welcome_label.configure(text=f"Welcome, {username}!")
+            username, firstname = result
+            display_name = firstname if firstname else username
+            self.welcome_label.configure(text=f"Welcome, {display_name}!")
 
         for child in self.entry_listbox.winfo_children():
             child.destroy()
@@ -352,7 +357,6 @@ class HomePage(ctk.CTkFrame):
 
     def load_entry_data(self, entry_id):
         self.current_selected_entry_id = entry_id
-        
         self.controller.db_cursor.execute("SELECT title, content, is_encrypted FROM Entries WHERE entry_id = ?", (entry_id,))
         entry_data = self.controller.db_cursor.fetchone()
         
@@ -369,18 +373,15 @@ class HomePage(ctk.CTkFrame):
         
         self.title_entry.delete(0, 'end')
         self.content_text.delete("1.0", 'end')
-        
         self.title_entry.insert(0, title)
         
         if is_encrypted:
-            # Show which song was used (stored in content) if possible, or just Encrypted
             self.content_text.insert("1.0", f"LOCKED DATA\n(Encrypted with Song Cipher)")
             self.content_text.configure(state="disabled") 
             self.encrypt_button.configure(state="disabled")
             self.decrypt_button.configure(state="normal")
         else:
             if content:
-                # Handle both bytes (from old saves) and string (new saves)
                 display_content = content
                 if isinstance(content, bytes):
                     display_content = content.decode('utf-8')
@@ -405,7 +406,6 @@ class HomePage(ctk.CTkFrame):
                 messagebox.showwarning("Encrypted", "Cannot save while entry is encrypted. Please decrypt first.")
                 return
 
-        # NOTE: We save as bytes (.encode) to be safe with SQLite BLOBs
         if self.current_selected_entry_id:
             self.controller.db_cursor.execute(
                 "UPDATE Entries SET title = ?, content = ?, is_encrypted = 0, date_modified = ? WHERE entry_id = ?",
@@ -435,68 +435,48 @@ class HomePage(ctk.CTkFrame):
         if not self.current_selected_entry_id:
              messagebox.showwarning("Error", "Please save the note before encrypting.")
              return
-             
-        # Check if it's already encrypted
+        
         self.controller.db_cursor.execute("SELECT is_encrypted FROM Entries WHERE entry_id = ?", (self.current_selected_entry_id,))
         if self.controller.db_cursor.fetchone()[0] == 1:
             messagebox.showinfo("Info", "This entry is already encrypted.")
             return
 
-        # 1. Get the password
         dialog = ctk.CTkInputDialog(text="Enter a password to combine with the Song Key:", title="Encrypt Note")
         password = dialog.get_input()
-        
-        if not password:
-            return
+        if not password: return
             
-        # 2. Get the plaintext
         plaintext = self.content_text.get("1.0", 'end-1c')
-        
-        # 3. Encrypt the data using our CUSTOM Song Cipher
         try:
-            # We don't need to encode plaintext to bytes here, our custom util handles it
             encrypted_string = crypto_utils.encrypt_data(plaintext, password)
-            
-            # 4. Save to DB
             now = datetime.datetime.now().isoformat()
-            # We save the string directly as bytes
             self.controller.db_cursor.execute(
                 "UPDATE Entries SET content = ?, is_encrypted = 1, date_modified = ? WHERE entry_id = ?",
                 (encrypted_string.encode('utf-8'), now, self.current_selected_entry_id)
             )
             self.controller.db_conn.commit()
-            
             self.load_entry_data(self.current_selected_entry_id)
             messagebox.showinfo("Success", f"Entry encrypted! Random song selected.")
-            
         except Exception as e:
             messagebox.showerror("Error", f"Encryption failed: {e}")
 
     def decrypt_entry(self):
         if not self.current_selected_entry_id: return
-
-        # 1. Get the password
         dialog = ctk.CTkInputDialog(text="Enter password to UNLOCK this note:", title="Decrypt Note")
         password = dialog.get_input()
-        
         if not password: return 
             
-        # 2. Get the encrypted blob from the database
         self.controller.db_cursor.execute("SELECT content FROM Entries WHERE entry_id = ?", (self.current_selected_entry_id,))
         encrypted_blob = self.controller.db_cursor.fetchone()[0]
         
-        # 3. Try to decrypt using CUSTOM Song Cipher
         decrypted_text = crypto_utils.decrypt_data(encrypted_blob, password)
         
         if decrypted_text and not decrypted_text.startswith("Error"):
             self.content_text.configure(state="normal")
             self.content_text.delete("1.0", 'end')
             self.content_text.insert("1.0", decrypted_text)
-            
             self.encrypt_button.configure(state="normal")
             self.decrypt_button.configure(state="disabled")
             
-            # Auto-save the decrypted version
             try:
                 now = datetime.datetime.now().isoformat()
                 self.controller.db_cursor.execute(
@@ -505,10 +485,8 @@ class HomePage(ctk.CTkFrame):
                 )
                 self.controller.db_conn.commit()
                 messagebox.showinfo("Success", "Entry unlocked!")
-                
             except sqlite3.Error as e:
                 messagebox.showerror("Save Error", f"Failed to save decrypted text: {e}")
-            
         else:
             msg = decrypted_text if decrypted_text else "Decryption failed."
             messagebox.showerror("Error", msg)
@@ -521,37 +499,21 @@ class App(ctk.CTk):
         super().__init__()
 
         self.title("CryptoPad - Song Cipher Edition")
-        self.geometry("400x550")
+        self.geometry("400x650") # INCREASED HEIGHT TO FIT NEW FIELDS
         self.resizable(False, False)
         self.current_user_id = None
 
-        # --- Database Connection ---
         try:
             self.db_conn = sqlite3.connect('CryptoPad.db')
             self.db_cursor = self.db_conn.cursor()
-            
-            # Ensure tables exist (Basic schema creation for safety)
-            self.db_cursor.execute('''CREATE TABLE IF NOT EXISTS User_Registration (
-                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE,
-                password_hash TEXT,
-                salt TEXT,
-                date_registered TEXT
-            )''')
-            self.db_cursor.execute('''CREATE TABLE IF NOT EXISTS User_Logins (
-                login_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                login_timestamp TEXT
-            )''')
-            self.db_cursor.execute('''CREATE TABLE IF NOT EXISTS Entries (
-                entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                title TEXT,
-                content BLOB,
-                is_encrypted INTEGER DEFAULT 0,
-                date_modified TEXT
-            )''')
-            self.db_conn.commit()
+            # Basic check if tables exist, if not close and warn user
+            try:
+                self.db_cursor.execute("SELECT * FROM User_Registration LIMIT 1")
+            except sqlite3.Error:
+                # If this fails, the DB structure is wrong.
+                # We won't run the setup script here to avoid overwriting, 
+                # but we will assume the user ran database_setup.py
+                pass
             
         except sqlite3.Error as e:
             messagebox.showerror("Database Error", f"Failed to connect: {e}")
@@ -574,17 +536,13 @@ class App(ctk.CTk):
 
     def show_frame(self, page_class):
         frame = self.frames[page_class]
-        
-        # If we are showing the HomePage, resize the window
         if page_class == HomePage:
-            self.geometry("800x600") # Make window bigger for homepage
+            self.geometry("800x600") 
             self.resizable(True, True)
-            frame.load_user_entries() # Tell homepage to load this user's data
+            frame.load_user_entries() 
         else:
-            # --- CHANGE THIS LINE BELOW ---
-            self.geometry("400x650") # Increased height from 550 to 650
+            self.geometry("400x750") # INCREASED HEIGHT FOR REGISTRATION SCROLL
             self.resizable(False, False)
-            
         frame.tkraise()
 
     def set_current_user(self, user_id):
